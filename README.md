@@ -13,11 +13,13 @@ File | Description
 `./R/distant-lags.R` | Effects of distant lags on the procedure
 `./R/experiments` | CSV files and images of experiments
 
+
 ## Algorithm
 
-The primary algorithm presented in the paper is as follows.
+The primary algorithm presented in the paper is as follows:
 
 **Inputs:** Time series data $\{y_t\}$, reference model $P^\ast$, reference model $Q^\ast$, [projpred model selection heuristic](https://mc-stan.org/projpred/reference/suggest_size.html) parameters `alpha` and `pct`
+
 1. Perform Ljung-Box test for stationarity to data $\{y_t\}$ and print warning message if failed
 2. Fit a linear reference model (AR) to these data observations $\{y_t\}$ with `BRMS` and lag parameter $P^\ast$
 3. Apply the model selection heuristic to this reference AR model to get some restricted AR lag value $P^\perp$
