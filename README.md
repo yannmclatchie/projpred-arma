@@ -1,5 +1,18 @@
 # Kullback-Leibler Projections for Automatic Order Identification of Seasonal ARMA Models
 
+## About
+
+The code is organised as follows:
+
+File | Description
+---|---
+`./R/arma_projpred.R` | Implementation of the primary algorithm presented in the paper
+`./R/arma-test.R` | Order recovery experiments for ARMA models
+`./R/sarma-test.R` | Order recovery experiments for SARMA models
+`./R/mona-loa.R` | Real data experiments
+`./R/distant-lags.R` | Effects of distant lags on the procedure
+`./R/experiments` | CSV files and images of experiments
+
 ## Development
 
 This code uses a local branch of `projpred` in order to perform the time series search heuristic, where the only change from vanilla `projpred` is in `/R/search.R` where we add
