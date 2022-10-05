@@ -1,20 +1,8 @@
 # Kullback-Leibler Projections for Automatic Order Identification of Seasonal ARMA Models
 
-## About
+This repository holds the code for the paper _Bayesian order identification of ARMA models with projection predictive inference_ by McLatchie et al. ([2022](https://arxiv.org/abs/2208.14824)).
 
-The code is organised as follows:
-
-File | Description
----|---
-`./R/arma_projpred.R` | Implementation of the primary algorithm presented in the paper
-`./R/arma-test.R` | Order recovery experiments for ARMA models
-`./R/sarma-test.R` | Order recovery experiments for SARMA models
-`./R/mona-loa.R` | Real data experiments
-`./R/distant-lags.R` | Effects of distant lags on the procedure
-`./R/experiments` | CSV files and images of experiments
-
-
-## Algorithm
+## Algorithm
 
 The primary algorithm presented in the paper is as follows:
 
