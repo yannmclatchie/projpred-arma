@@ -1,17 +1,14 @@
-sarma.sim = function(n, phi1, phi2, theta1, theta2){
-  n = 100
-  y = numeric(n)
-  y[1] = y[2] = 0
-  eps = rnorm(n)
-  
-  for(i in 3:n)
-  {
-    y[i] = phi1*y[i-1] + phi2*y[i-2] + theta1*eps[i-1] + theta2*eps[i-2] + eps[i]
-  }
-  
-  return(y)
-}
+require(devtools)
+require(brms)
 
+# load local version of projpred
+setwd("~/Desktop/Aalto/projpred-arma")
+if("projpred" %in% (.packages())){
+  detach("package:projpred", unload=TRUE) 
+}
+load_all("./projpred/")
+
+# define default arma prior
 arma_prior <- c(
   prior_string("normal(0, 0.5)", class = "b"),
   # prior_string("student_t(7, 7, 3)", class = "sigma"),
@@ -34,7 +31,7 @@ arma_prior <- c(
     )
   }
   # fit AR model in BRMS
-  ar_fit <- brms::brm(
+  ar_fit <- brm(
     formula = ar_formula,
     data = X,
     family = gaussian,
@@ -61,7 +58,7 @@ arma_prior <- c(
       formula(paste("eps.t0 ~ 1 + ", paste0(lagged_covs, collapse = " + ")))
   }
   # fit MA model to residuals
-  ma_fit <- brms::brm(
+  ma_fit <- brm(
     ma_formula,
     data = E,
     family = gaussian,
@@ -95,20 +92,21 @@ arma_prior <- c(
 ){
   # perform latent projection predictive variable selection on model
   if (!cv) {
-    vs <- projpred::varsel(refmodel, method = "arma", verbose = FALSE)
+    vs <- varsel(refmodel, method = "arma", verbose = FALSE)
   }
   else {
-    vs <- projpred::cv_varsel(refmodel, method = "arma", verbose = FALSE)
+    vs <- cv_varsel(refmodel, method = "arma", verbose = FALSE)
   }
   # use heuristic to chose informative parameters in submodel
   suggested_size <- suggest_size(vs, alpha = alpha, pct = pct, stat = stat)
   # extract the largest lag from the restricted covariate space
   lag_perp <- length(
-    unlist(as.list(projpred::solution_terms(vs))[0:suggested_size])
+    unlist(as.list(solution_terms(vs))[0:suggested_size])
   )
   return(lag_perp)
 }
 
+# primary function
 proj_arma <- function(
   data,
   P_max = 6,
@@ -134,16 +132,16 @@ proj_arma <- function(
   ar_refmodel <- .get_ar_refmodel(data, P_max = P_max)
   # perform variable selection on AR component
   if (!cv) {
-    vs <- projpred::varsel(ar_refmodel, method = "arma", verbose = FALSE)
+    vs <- varsel(ar_refmodel, method = "arma", verbose = FALSE)
   }
   else {
-    vs <- projpred::cv_varsel(ar_refmodel, method = "arma", verbose = FALSE)
+    vs <- cv_varsel(ar_refmodel, method = "arma", verbose = FALSE)
   }
   # use heuristic to chose informative parameters in submodel
   suggested_size <- suggest_size(vs, alpha = alpha, pct = pct, stat = stat)
   # extract the largest lag from the restricted covariate space
   P_perp <- length(
-    unlist(as.list(projpred::solution_terms(vs))[0:suggested_size])
+    unlist(as.list(solution_terms(vs))[0:suggested_size])
   )
   if(!silent){message(paste0("Done!\nP_perp = ", P_perp))}
   
