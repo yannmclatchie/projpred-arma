@@ -1,6 +1,4 @@
-# require("projpredarma")
-# devtools::load_all("../../projpred/")
-library("projpredarma")
+library("projpred")
 library("brms")
 library("dplyr")
 
@@ -17,11 +15,11 @@ arma_prior <- c(
     `colnames<-`(sprintf("x.t%s", 0:P))
   # build AR formula
   if (P == 0) {
-    ar_formula <- formula("x.t0 ~ 1")
+    ar_formula <- "x.t0 ~ 1"
   } else {
     lagged_covs <- colnames(X)[colnames(X) != "x.t0"]
-    ar_formula <- formula(
-      paste("x.t0 ~ 1 + ", paste0(lagged_covs, collapse = " + "))
+    ar_formula <- paste(
+      "x.t0 ~ 1 + ", paste0(lagged_covs, collapse = " + ")
     )
   }
   # fit AR model in BRMS
@@ -53,55 +51,26 @@ arma_prior <- c(
   ma_fit <- brms::brm(
     ma_formula,
     data = E,
-    family = gaussian,
     prior = arma_prior,
     silent = 2,
-    backend = "rstan",
     open_progress = FALSE,
     refresh = 0
   )
-  return(list(fit = ma_fit, formula = ma_formula))
+  return(ma_fit)
 }
 
-.get_ar_refmodel <- function(data, P_max = 6){
-  # fit full model in BRMS
-  brms_ar <- .fit_ar_model(data, P_max)
-  # return refmodel
-  ar_ref <- projpredarma::get_arma_refmodel(
-    object = brms_ar
-  )
-  print(class(ar_ref))
-  return(ar_ref)
-}
-
-.get_ma_refmodel <- function(eps, Q_max = 6){
-  # fit MA model to residuals
-  brma_ma <- .fit_ma_model(eps, Q_max)
-  # return refmodel
-  ma_ref <- get_refmodel(brma_ma)
-  return(ma_ref)
-}
-
-.get_restricted_lag <- function(
-    refmodel, data, alpha = 0.32, pct = 0, cv = FALSE, stat = "elpd"
-){
+.perform_search <- function(refmodel, cv = FALSE){
   # perform latent projection predictive variable selection on model
   if (!cv) {
-    vs <- varsel(refmodel, verbose = FALSE) #  method = "arma",
+    vs <- projpred::varsel(refmodel, method = "arma", verbose = FALSE)
   }
   else {
-    vs <- cv_varsel(refmodel, verbose = FALSE) # method = "arma",
+    vs <- projpred::cv_varsel(refmodel, method = "arma", verbose = FALSE)
   }
-  # use heuristic to chose informative parameters in submodel
-  suggested_size <- suggest_size(vs, alpha = alpha, pct = pct, stat = stat)
-  # extract the largest lag from the restricted covariate space
-  lag_perp <- length(
-    unlist(as.list(solution_terms(vs))[0:suggested_size])
-  )
-  return(lag_perp)
+  return(vs)
 }
 
-proj_arma <- function(
+projpred_arma <- function(
     data,
     P_max = 6,
     Q_max = 6,
@@ -123,32 +92,29 @@ proj_arma <- function(
   
   # apply projpred to AR component
   if(!silent){message("Applying projpred to the AR component ... ")}
-  ar_refmodel <- .get_ar_refmodel(data, P_max = P_max)
-  # perform variable selection on AR component
-  if (!cv) {
-    vs <- varsel(ar_refmodel, verbose = FALSE) # method = "arma",
-  }
-  else {
-    vs <- cv_varsel(ar_refmodel, verbose = FALSE) # method = "arma",
-  }
+  ar_refmodel <- .fit_ar_model(data, P = P_max)
+  ar_search <- .perform_search(ar_refmodel)
   # use heuristic to chose informative parameters in submodel
-  suggested_size <- suggest_size(vs, alpha = alpha, pct = pct, stat = stat)
+  suggested_size <- projpred::suggest_size(
+    ar_search, alpha = alpha, pct = pct, stat = stat
+  )
   # extract the largest lag from the restricted covariate space
   P_perp <- length(
-    unlist(as.list(solution_terms(vs))[0:suggested_size])
+    unlist(as.list(solution_terms(ar_search))[0:suggested_size])
   )
   if(!silent){message(paste0("Done!\nP_perp = ", P_perp))}
   
   # extract residuals from projected AR component
-  projected_ar <- project(vs, nterms = suggested_size)
-  proj_ar_pred <- colMeans(proj_linpred(projected_ar)$pred)
+  projected_ar <- projpred::project(ar_search, nterms = suggested_size)
+  proj_ar_pred <- colMeans(projpred::proj_linpred(projected_ar)$pred)
   res <- proj_ar_pred - head(data, length(proj_ar_pred))
   
   # apply projpred to MA component
   if(!silent){message("Applying projpred to the MA component ... ")}
-  ma_refmodel <- .get_ma_refmodel(res, Q_max = Q_max)
-  Q_perp <- .get_restricted_lag(
-    ma_refmodel, data, alpha = alpha, pct = pct, cv = cv, stat = stat
+  ma_refmodel <- .fit_ma_model(res, Q = Q_max)
+  ma_search <- .perform_search(ma_refmodel)
+  Q_perp <- projpred::suggest_size(
+    ma_search, alpha = alpha, pct = pct, stat = stat
   )
   if(!silent){message(paste0("Done!\nQ_perp = ", Q_perp))}
   if(!silent){
