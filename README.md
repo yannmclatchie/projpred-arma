@@ -1,4 +1,4 @@
-# Kullback-Leibler Projections for Automatic Order Identification of Seasonal ARMA Models
+# Kullback-Leibler Projections for Automatic Order Identification of Bayesian ARMA Models
 
 This repository implements Algorithm 1 of the paper _Bayesian order identification of ARMA models with projection predictive inference_ by McLatchie et al. ([2022](https://arxiv.org/abs/2208.14824)).
 
